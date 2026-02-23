@@ -1,24 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>FocusFlow</title>
-  <link rel="stylesheet" href="popup.css" />
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
 
 <div class="app">
   <h1>FocusFlow</h1>
-  <p class="subtitle">Your productivity snapshot</p>
+  <p class="subtitle">Productivity Dashboard</p>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" data-tab="today">Today</button>
     <button class="tab" data-tab="trends">Trends</button>
-    <button class="tab" data-tab="insights">Insights</button>
+    <button class="tab" data-tab="goals">Goals</button>
   </div>
 
-  <!-- TAB 1: TODAY -->
+  <!-- TODAY -->
   <div class="tab-content active" id="today">
     <div class="card">
       <h3>Focus Time</h3>
@@ -27,7 +26,7 @@
 
     <div class="card">
       <h3>Break Time</h3>
-      <div id="breakTime">0h 0m</div>
+      <div id="breakTime" class="timer">00:00:00.000</div>
     </div>
 
     <div class="card">
@@ -36,7 +35,7 @@
     </div>
   </div>
 
-  <!-- TAB 2: TRENDS -->
+  <!-- TRENDS -->
   <div class="tab-content" id="trends">
     <div class="card">
       <select id="range">
@@ -44,16 +43,27 @@
         <option value="5">Last 5 Days</option>
         <option value="7" selected>Last 7 Days</option>
       </select>
-
       <div class="chart" id="chart"></div>
-      <p id="trendSummary" class="insight"></p>
     </div>
   </div>
 
-  <!-- TAB 3: INSIGHTS -->
-  <div class="tab-content" id="insights">
+  <!-- GOALS -->
+  <div class="tab-content" id="goals">
     <div class="card">
-      <ul id="insightList"></ul>
+      <h3>Daily Focus Goal 🎯</h3>
+
+      <div class="goal-inputs">
+        <input id="goalHours" type="number" min="0" placeholder="Hours">
+        <input id="goalMinutes" type="number" min="0" max="59" placeholder="Minutes">
+        <button id="saveGoal">Save</button>
+      </div>
+
+      <div class="progress-bar">
+        <div id="progressFill"></div>
+      </div>
+
+      <p id="goalText"></p>
+      <p id="goalStatus"></p>
     </div>
   </div>
 </div>
