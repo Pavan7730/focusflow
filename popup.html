@@ -11,22 +11,23 @@
   <h1>FocusFlow</h1>
   <p class="subtitle">Productivity Dashboard</p>
 
+  <!-- TABS -->
   <div class="tabs">
     <button class="tab active" data-tab="today">Today</button>
     <button class="tab" data-tab="trends">Trends</button>
     <button class="tab" data-tab="goals">Goals</button>
   </div>
 
-  <!-- TODAY -->
+  <!-- TODAY TAB -->
   <div class="tab-content active" id="today">
     <div class="card">
       <h3>Focus Time</h3>
-      <div id="liveFocus" class="timer">00:00:00.000</div>
+      <div id="liveFocus" class="timer">00:00:00</div>
     </div>
 
     <div class="card">
       <h3>Break Time</h3>
-      <div id="breakTime" class="timer">00:00:00.000</div>
+      <div id="breakTime" class="timer">00:00:00</div>
     </div>
 
     <div class="card">
@@ -35,19 +36,22 @@
     </div>
   </div>
 
-  <!-- TRENDS -->
+  <!-- TRENDS TAB -->
   <div class="tab-content" id="trends">
     <div class="card">
+      <h3>Focus Trends</h3>
+
       <select id="range">
         <option value="3">Last 3 Days</option>
         <option value="5">Last 5 Days</option>
         <option value="7" selected>Last 7 Days</option>
       </select>
+
       <div class="chart" id="chart"></div>
     </div>
   </div>
 
-  <!-- GOALS -->
+  <!-- GOALS TAB -->
   <div class="tab-content" id="goals">
     <div class="card">
       <h3>Daily Focus Goal 🎯</h3>
