@@ -1,30 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8" />
   <title>FocusFlow</title>
-  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="app">
-    <h1>FocusFlow</h1>
-    <p class="subtitle">Your productivity snapshot</p>
 
-    <section>
-      <h2>Today</h2>
-      <div id="todayStats">Loading...</div>
-    </section>
+<div class="app">
+  <h1>FocusFlow</h1>
+  <p class="subtitle">Your productivity snapshot</p>
 
-    <section>
-      <h2>Most Used Sites</h2>
-      <ul id="topSites"></ul>
-    </section>
-
-    <section>
-      <h2>Last 7 Days Focus</h2>
-      <ul id="weekly"></ul>
-    </section>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="today">Today</button>
+    <button class="tab" data-tab="trends">Trends</button>
+    <button class="tab" data-tab="insights">Insights</button>
   </div>
 
-  <script src="popup.js"></script>
+  <!-- TAB 1: TODAY -->
+  <div class="tab-content active" id="today">
+    <div class="card">
+      <h3>Focus Time</h3>
+      <div id="liveFocus" class="timer">00:00:00.000</div>
+    </div>
+
+    <div class="card">
+      <h3>Break Time</h3>
+      <div id="breakTime">0h 0m</div>
+    </div>
+
+    <div class="card">
+      <h3>Most Used Sites</h3>
+      <ul id="topSites"></ul>
+    </div>
+  </div>
+
+  <!-- TAB 2: TRENDS -->
+  <div class="tab-content" id="trends">
+    <div class="card">
+      <select id="range">
+        <option value="3">Last 3 Days</option>
+        <option value="5">Last 5 Days</option>
+        <option value="7" selected>Last 7 Days</option>
+      </select>
+
+      <div class="chart" id="chart"></div>
+      <p id="trendSummary" class="insight"></p>
+    </div>
+  </div>
+
+  <!-- TAB 3: INSIGHTS -->
+  <div class="tab-content" id="insights">
+    <div class="card">
+      <ul id="insightList"></ul>
+    </div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
 </body>
 </html>
