@@ -1,11 +1,13 @@
-// FocusFlow background.js (STABLE VERSION)
+// FocusFlow background.js (FINAL – Correct Break Logic)
 
 let lastTick = Date.now();
 let lastActiveTime = Date.now();
 let currentDomain = null;
+let chromeWindowFocused = true;
 
 const BREAK_THRESHOLD = 20000; // 20 seconds
 
+/* ---------- HELPERS ---------- */
 function todayKey() {
   return new Date().toISOString().split("T")[0];
 }
@@ -32,11 +34,13 @@ async function saveDay(day) {
   await chrome.storage.local.set({ [todayKey()]: day });
 }
 
-// Track active tab
+/* ---------- TRACK ACTIVE TAB ---------- */
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId);
-  currentDomain = getDomain(tab?.url);
-  lastActiveTime = Date.now();
+  if (tab?.url) {
+    currentDomain = getDomain(tab.url);
+    lastActiveTime = Date.now();
+  }
 });
 
 chrome.tabs.onUpdated.addListener((_, info, tab) => {
@@ -46,7 +50,7 @@ chrome.tabs.onUpdated.addListener((_, info, tab) => {
   }
 });
 
-// Detect user activity
+/* ---------- TRACK USER ACTIVITY ---------- */
 chrome.idle.setDetectionInterval(15);
 chrome.idle.onStateChanged.addListener(state => {
   if (state === "active") {
@@ -54,24 +58,34 @@ chrome.idle.onStateChanged.addListener(state => {
   }
 });
 
-// MAIN TIMER (EVERY SECOND)
+/* ---------- TRACK CHROME WINDOW FOCUS ---------- */
+chrome.windows.onFocusChanged.addListener(windowId => {
+  chromeWindowFocused = windowId !== chrome.windows.WINDOW_ID_NONE;
+});
+
+/* ---------- MAIN TIMER (EVERY SECOND) ---------- */
 setInterval(async () => {
   const now = Date.now();
   const delta = now - lastTick;
   lastTick = now;
 
   const day = await getDay();
+  const isIdle = now - lastActiveTime > BREAK_THRESHOLD;
 
-  // BREAK LOGIC
-  if (now - lastActiveTime > BREAK_THRESHOLD) {
+  if (isIdle && chromeWindowFocused) {
+    // ✅ REAL BREAK: user idle while Chrome is focused
     day.breakMs += delta;
-  } else {
+  } 
+  else if (!isIdle && chromeWindowFocused) {
+    // ✅ REAL FOCUS: user active inside Chrome
     day.focusMs += delta;
+
     if (currentDomain) {
       day.sites[currentDomain] =
         (day.sites[currentDomain] || 0) + delta;
     }
   }
+  // ❌ User active outside Chrome → ignore completely
 
   await saveDay(day);
 }, 1000);
