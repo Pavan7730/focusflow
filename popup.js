@@ -1,10 +1,22 @@
+/*******************************
+ * FocusFlow – popup.js (FINAL)
+ *******************************/
+
 /* ---------- HELPERS ---------- */
 function format(ms) {
+  ms = Number(ms);
+  if (!ms || ms < 0) ms = 0;
+
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
   const x = ms % 1000;
-  return `${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}.${x}`;
+
+  return `${h.toString().padStart(2, "0")}:${m
+    .toString()
+    .padStart(2, "0")}:${s
+    .toString()
+    .padStart(2, "0")}.${x.toString().padStart(3, "0")}`;
 }
 
 function todayKey() {
@@ -19,67 +31,107 @@ function lastNDays(n) {
   });
 }
 
-/* ---------- TABS ---------- */
+/* ---------- TAB SWITCHING ---------- */
 document.querySelectorAll(".tab").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".tab,.tab-content")
-      .forEach(e => e.classList.remove("active"));
+  btn.addEventListener("click", () => {
+    document
+      .querySelectorAll(".tab, .tab-content")
+      .forEach(el => el.classList.remove("active"));
+
     btn.classList.add("active");
     document.getElementById(btn.dataset.tab).classList.add("active");
-  };
+  });
 });
 
-/* ---------- SAVE GOAL ---------- */
-document.getElementById("saveGoal").onclick = () => {
-  const h = +goalHours.value || 0;
-  const m = +goalMinutes.value || 0;
-  chrome.storage.local.set({ focusGoalMs: (h * 60 + m) * 60000 });
-};
+/* ---------- SAVE DAILY GOAL ---------- */
+const saveBtn = document.getElementById("saveGoal");
+if (saveBtn) {
+  saveBtn.onclick = () => {
+    const h = Number(document.getElementById("goalHours")?.value || 0);
+    const m = Number(document.getElementById("goalMinutes")?.value || 0);
+    const goalMs = (h * 60 + m) * 60000;
 
-/* ---------- LIVE REFRESH ---------- */
+    chrome.storage.local.set({ focusGoalMs: goalMs });
+  };
+}
+
+/* ---------- MAIN REFRESH LOOP ---------- */
 function refresh() {
   chrome.storage.local.get(null, data => {
-    const today = data[todayKey()] || { focusMs: 0, breakMs: 0, sites: {} };
+    const todayData = data[todayKey()] || {};
+
+    const storedFocus = Number(todayData.focusMs) || 0;
+    const storedBreak = Number(todayData.breakMs) || 0;
+    const sites = todayData.sites || {};
 
     chrome.runtime.sendMessage("getLiveState", live => {
-      let focusMs = today.focusMs;
-      let breakMs = today.breakMs;
+      // MV3 safety: background may be asleep
+      if (chrome.runtime.lastError || !live) return;
 
-      if (live.focusRunning) focusMs += Date.now() - live.focusSince;
-      if (live.breakRunning) breakMs += Date.now() - live.breakSince;
+      let focusMs = storedFocus;
+      let breakMs = storedBreak;
 
-      liveFocus.textContent = format(focusMs);
-      breakTime.textContent = format(breakMs);
+      if (live.focusRunning && typeof live.focusSince === "number") {
+        focusMs += Date.now() - live.focusSince;
+      }
 
-      topSites.innerHTML = "";
-      Object.entries(today.sites)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0,5)
-        .forEach(([s,ms]) => {
-          const li = document.createElement("li");
-          li.textContent = `${s} – ${format(ms)}`;
-          topSites.appendChild(li);
+      if (live.breakRunning && typeof live.breakSince === "number") {
+        breakMs += Date.now() - live.breakSince;
+      }
+
+      /* ---------- TODAY TAB ---------- */
+      const focusEl = document.getElementById("liveFocus");
+      const breakEl = document.getElementById("breakTime");
+      if (focusEl) focusEl.textContent = format(focusMs);
+      if (breakEl) breakEl.textContent = format(breakMs);
+
+      /* ---------- MOST USED SITES ---------- */
+      const ul = document.getElementById("topSites");
+      if (ul) {
+        ul.innerHTML = "";
+        Object.entries(sites)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .forEach(([site, ms]) => {
+            const li = document.createElement("li");
+            li.textContent = `${site} – ${format(ms)}`;
+            ul.appendChild(li);
+          });
+      }
+
+      /* ---------- TRENDS TAB ---------- */
+      const chart = document.getElementById("chart");
+      const range = document.getElementById("range");
+      if (chart && range) {
+        chart.innerHTML = "";
+        lastNDays(Number(range.value)).forEach(day => {
+          const dayFocus = Number(data[day]?.focusMs) || 0;
+          const bar = document.createElement("div");
+          bar.className = "bar";
+          bar.style.height = `${Math.min(
+            (dayFocus / 60000) * 2,
+            100
+          )}px`;
+          chart.appendChild(bar);
         });
+      }
 
-      /* TRENDS */
-      chart.innerHTML = "";
-      lastNDays(+range.value).forEach(d => {
-        const bar = document.createElement("div");
-        bar.className = "bar";
-        bar.style.height = `${Math.min((data[d]?.focusMs || 0)/60000*2,100)}px`;
-        chart.appendChild(bar);
-      });
+      /* ---------- GOALS TAB ---------- */
+      const goalMs = Number(data.focusGoalMs) || 0;
+      const fill = document.getElementById("progressFill");
+      const goalText = document.getElementById("goalText");
+      const goalStatus = document.getElementById("goalStatus");
 
-      /* GOAL */
-      const goal = data.focusGoalMs || 0;
-      if (goal > 0) {
-        const p = Math.min((focusMs / goal) * 100, 100);
-        progressFill.style.width = p + "%";
-        goalText.textContent = `${format(focusMs)} / ${format(goal)}`;
-        goalStatus.textContent = p >= 100 ? "Goal achieved 🎉" : "You're on track 👍";
+      if (goalMs > 0 && fill && goalText && goalStatus) {
+        const percent = Math.min((focusMs / goalMs) * 100, 100);
+        fill.style.width = percent + "%";
+        goalText.textContent = `${format(focusMs)} / ${format(goalMs)}`;
+        goalStatus.textContent =
+          percent >= 100 ? "Goal achieved 🎉" : "You're on track 👍";
       }
     });
   });
 }
 
+/* ---------- REAL-TIME UPDATE ---------- */
 setInterval(refresh, 100);
