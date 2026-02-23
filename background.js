@@ -1,56 +1,91 @@
 let currentDomain = null;
-let startTime = null;
+let focusStart = null;
+let breakStart = null;
 
 function todayKey() {
   return new Date().toISOString().split("T")[0];
 }
 
 function getDomain(url) {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return null;
-  }
+  try { return new URL(url).hostname; } catch { return null; }
 }
 
-async function saveTime(domain, ms) {
-  if (!domain || ms <= 0) return;
-
-  const minutes = Math.round(ms / 60000);
+async function getDay() {
   const key = todayKey();
-
   const data = await chrome.storage.local.get(key);
-  const day = data[key] || { sites: {} };
-
-  day.sites[domain] = (day.sites[domain] || 0) + minutes;
-
-  await chrome.storage.local.set({ [key]: day });
+  return data[key] || {
+    sites: {},
+    focusMs: 0,
+    breakMs: 0
+  };
 }
 
-async function switchDomain(url) {
-  const now = Date.now();
-  if (currentDomain && startTime) {
-    await saveTime(currentDomain, now - startTime);
+async function saveDay(day) {
+  await chrome.storage.local.set({ [todayKey()]: day });
+}
+
+async function saveFocus(ms) {
+  if (!currentDomain || ms <= 0) return;
+  const day = await getDay();
+  day.focusMs += ms;
+  day.sites[currentDomain] = (day.sites[currentDomain] || 0) + ms;
+  await saveDay(day);
+}
+
+async function saveBreak(ms) {
+  if (ms <= 0) return;
+  const day = await getDay();
+  day.breakMs += ms;
+  await saveDay(day);
+}
+
+async function startFocus(url) {
+  if (breakStart) {
+    await saveBreak(Date.now() - breakStart);
+    breakStart = null;
   }
   currentDomain = getDomain(url);
-  startTime = now;
+  focusStart = Date.now();
 }
 
+async function stopFocus() {
+  if (focusStart) {
+    await saveFocus(Date.now() - focusStart);
+    focusStart = null;
+  }
+}
+
+// TAB EVENTS
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId);
-  if (tab?.url) switchDomain(tab.url);
+  if (tab?.url) await startFocus(tab.url);
 });
 
-chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
-  if (info.url) switchDomain(info.url);
+chrome.tabs.onUpdated.addListener((_, info, tab) => {
+  if (info.url) startFocus(info.url);
 });
 
+// IDLE = BREAK
 chrome.idle.setDetectionInterval(60);
-chrome.idle.onStateChanged.addListener(async (state) => {
+chrome.idle.onStateChanged.addListener(async state => {
   if (state !== "active") {
-    if (currentDomain && startTime) {
-      await saveTime(currentDomain, Date.now() - startTime);
-    }
-    startTime = null;
+    await stopFocus();
+    breakStart = Date.now();
+  } else {
+    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+      if (tab?.url) startFocus(tab.url);
+    });
+  }
+});
+
+// MESSAGE FOR LIVE DATA
+chrome.runtime.onMessage.addListener((msg, _, send) => {
+  if (msg === "getLiveState") {
+    send({
+      focusRunning: !!focusStart,
+      focusSince: focusStart,
+      breakRunning: !!breakStart,
+      breakSince: breakStart
+    });
   }
 });
