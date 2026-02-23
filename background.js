@@ -13,11 +13,7 @@ function getDomain(url) {
 async function getDay() {
   const key = todayKey();
   const data = await chrome.storage.local.get(key);
-  return data[key] || {
-    sites: {},
-    focusMs: 0,
-    breakMs: 0
-  };
+  return data[key] || { sites: {}, focusMs: 0, breakMs: 0 };
 }
 
 async function saveDay(day) {
@@ -55,17 +51,17 @@ async function stopFocus() {
   }
 }
 
-// TAB EVENTS
+/* TAB EVENTS */
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId);
-  if (tab?.url) await startFocus(tab.url);
+  if (tab?.url) startFocus(tab.url);
 });
 
 chrome.tabs.onUpdated.addListener((_, info, tab) => {
   if (info.url) startFocus(info.url);
 });
 
-// IDLE = BREAK
+/* IDLE = BREAK */
 chrome.idle.setDetectionInterval(60);
 chrome.idle.onStateChanged.addListener(async state => {
   if (state !== "active") {
@@ -78,7 +74,7 @@ chrome.idle.onStateChanged.addListener(async state => {
   }
 });
 
-// MESSAGE FOR LIVE DATA
+/* LIVE STATE FOR POPUP */
 chrome.runtime.onMessage.addListener((msg, _, send) => {
   if (msg === "getLiveState") {
     send({
