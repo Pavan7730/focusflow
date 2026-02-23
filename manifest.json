@@ -1,16 +1,12 @@
 {
   "manifest_version": 3,
   "name": "FocusFlow – Productivity Tracker",
-  "description": "Helps users understand how they spend time on websites to improve focus and productivity.",
-  "version": "0.1.0",
+  "description": "Helps users understand and improve focus by tracking time spent on websites.",
+  "version": "1.0.0",
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": [
-    "tabs",
-    "storage",
-    "idle"
-  ],
+  "permissions": ["tabs", "storage", "idle"],
   "action": {
     "default_popup": "popup.html"
   },
